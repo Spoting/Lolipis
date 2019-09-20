@@ -26,7 +26,13 @@ if (pageIndex === 0) {
 //Get Urls
 let scrape = async () => {
     try {
-        const browser = await puppeteer.launch();
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+            ]
+        });
         const page = await browser.newPage();
         console.log(`We are producing products from : ${url}`);
         await page.goto(url);
