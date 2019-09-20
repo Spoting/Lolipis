@@ -3,7 +3,7 @@
 START=0
 END=10
 
-cd /home/spoting/Loli/Scrapper
+cd ~/Loli/Lolipis/Scrapper
 for ((i=END; i>=START; i--));
 	do
 		echo "Page: $i"
