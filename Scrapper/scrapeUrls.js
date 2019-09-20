@@ -11,55 +11,76 @@ const fs = require('fs').promises;
 
 
 //Getting argv from bash scripts
-const pageIndex = process.argv[2];
-if (!pageIndex) {
+const pageIndexes = process.argv[2];
+if (!pageIndexes) {
     throw "Please provide PageIndex as a first argument";
 }
+var arrPageIndexes = pageIndexes.split(",");
+console.log("Page Indexes", arrPageIndexes);
+console.log("With Length", arrPageIndexes.length);
 
-let url;
-if (pageIndex === 0) {
-    url = `https://e-hentai.org/?f_cats=1017`;
-} else {
-    url = `https://e-hentai.org/?page=${pageIndex}&f_cats=1017`;
-}
-
-//Get Urls
-let scrape = async () => {
+let scrapeUrls = async (browser) => {
     try {
-        const browser = await puppeteer.launch({
+        const browser = await puppeteer.launch({ // bot
             headless: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
             ]
         });
-        const page = await browser.newPage();
-        console.log(`We are producing products from : ${url}`);
-        await page.goto(url);
-        let urls = await page.evaluate(() => {
-            let results = [];
-            let titles = document.querySelectorAll('td.gl3c.glname'); //get everything from the third column 
-            titles.forEach((title) => {
-                let ref = title.querySelector('a');
-                results.push({                          //for makings an object
-                    url: ref.getAttribute('href')
-                });
+
+        const page = await browser.newPage(); //init webpage
+        let chain = Promise.resolve();
+        chain = chain.then(async () => {
+            arrPageIndexes.map(async (pageIndex) => { //the array from command line [ END, 9, 8, 7, ..., START ]
+                let url; // the url we gonna scrape from.
+                if (pageIndex === 0) {
+                    url = `https://e-hentai.org/?f_cats=1017`;
+                } else {
+                    url = `https://e-hentai.org/?page=${pageIndex}&f_cats=1017`;
+                }
+                console.log(`We are producing products from : ${url}`);
+                await page.goto(url);
+                let inResponseUrls = await page.evaluate(() => {
+                    let results = [];
+                    let titles = document.querySelectorAll('td.gl3c.glname'); //get everything from the third column 
+                    titles.forEach((title) => {
+                        let ref = title.querySelector('a');
+                        results.push({                          //for makings an object
+                            url: ref.getAttribute('href')
+                        });
+                    });
+                    return results;
+                })
+
+                return inResponseUrls;
             });
-            return results;
         })
+
         browser.close();
-        return urls;
+        return x;
     } catch (e) {
-        console.log(e);
+        //console.log(e);
     };
+
+}
+
+
+//Get Urls
+let scrape = async () => {
+
 };
+
+
+
+
 
 //write to file
 //TODO: Instead of a file inside project maybe try instantly writing to external storage
 const target = 'productsUrl';
-const storeData = async (data) => {
+const storeData = (data) => {
     try {
-        await fs.writeFile(target, JSON.stringify(data))
+        fs.writeFile(target, JSON.stringify(data))
     } catch (err) {
         console.error(err)
     }
@@ -67,13 +88,13 @@ const storeData = async (data) => {
 
 //getting file size qq
 getFilesizeInBytes = async () => {
-    const stats = await fs.stat(target);
+    const stats = fs.stat(target);
     const fileSizeInBytes = stats.size;
     return fileSizeInBytes;
 }
 
 //RUN
-scrape().then(async (urls) => {
+scrapeUrls().then((urls) => {
     if (urls.length === 0) {
         console.log("Gami8ikes sta fail me tin kolo DOM", urls);
         // QQ
@@ -81,9 +102,9 @@ scrape().then(async (urls) => {
         console.log("Success getting products URLs", urls);
         urls.reverse();
 
-        await storeData(urls);
+        storeData(urls);
 
-        let size = await getFilesizeInBytes();
+        let size = getFilesizeInBytes();
         console.log("Wrote URLs To file successfully with size " + size / 1000000.0 + "MB");
     }
 });
